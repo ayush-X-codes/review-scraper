@@ -1,94 +1,93 @@
 import * as cheerio from "cheerio";
+import fs from "fs";
 
 // Extract: name, price, rating, reviews, availability
+const file = "books.json";
 
-async function scrapeReview(url) {
-    try {
-        const response = await fetch(url);
-        console.log("response is: ", response);
+async function scrapeReview() {
+  try {
+    let books = [];
 
-        if (!response.ok) {
-            throw new Error("Failed to get data from internet");
-        }
+    for (let i = 1; i < 2; i++) {
+      const response = await fetch(
+        `https://books.toscrape.com/catalogue/page-${i}.html`,
+      );
 
-        const html = await response.text();
-        // console.log("html is: ", html)
+    //   console.log("request goes: ", response)
 
-        const $ = cheerio.load(html);
-        // console.log("cheeero html loaded: ", $.html())
+      if (!response.ok) {
+        throw new Error("Failed to get data from internet");
+      }
 
-        let books = [];
+      const html = await response.text();
 
-        $(".product_pod").each((i, el) => {
+      const $ = cheerio.load(html);
 
+    //   console.log("html is loaded using cheerio: ", $.html().split(" ").join(""))
 
-            const linkBook = $(el).find("h3 a").attr("href").trim();
-            const completeBookUrl = `https://books.toscrape.com/${linkBook}`
-            console.log("url of book is: ", linkBook)
+      $(".product_pod").each(async (i, el) => {
+        const linkBook = $(el).find("h3 a").attr("href").trim();
+        // console.log("every individal book url: ", linkBook)
 
-            async function getBookDetail(link) {
-                console.log("url is: ", link)
-                const res = await fetch(link);
-                // console.log("product name is: ", res);
+        const completeBookUrl = `https://books.toscrape.com/catalogue/${linkBook}`;
+        // console.log("every individual book url link: ", completeBookUrl)
 
-                if (!res.ok) {
-                    throw new Error("Failed to get data from internet");
-                }
-
-                const html = await res.text();
-                // console.log("html is: ", html)
-
-                const $ = cheerio.load(html);
-                // console.log("cheeero html loaded: ", $.html())
-
-                const bookName = $(el).find(".product_main h1").text();
-                const price = $(el).find(".price_color").text();
-                console.log("price is: ", price);
-
-                const cleanPrice = Number(price.replace(/[^\d.]/g, ""));
-                console.log("price with number: ", cleanPrice);
-
-                const availability = $(el).find(".availability").text().trim();
-                console.log("availability of item: ", availability);
-
-                const classAttr = $(el).find(".star-rating").attr("class");
-                const rating = classAttr.split(" ")[1].trim();
-                console.log("rating is: ", rating);
-
-                const review = $(el).find(".table tbody tr:last-child td").text();
-                console.log("review are: ", review);
-
-                const result = {
-                    name: bookName,
-                    price: cleanPrice,
-                    rating: rating,
-                    availability: availability,
-                    reviews: review
-                }
-                books.push(result)
-            }
-            console.log("all specific books: ", books)
-
-
-            getBookDetail(completeBookUrl)
-
-
-
-            //   const price = $(el).find(".product_price .price_color").text();
-            //   console.log("price is: ", price);
-
-            //   const cleanPrice = Number(price.replace(/[^\d.]/g, ""));
-            //   console.log("price with number: ", cleanPrice);
-
-
-
-
-        });
-
-        console.log("All books are: ", books)
-    } catch (error) {
-        console.error("Something went wrong: ", error);
+        await getBookDetail(completeBookUrl, el);
+      });
     }
+
+    // let data = [];
+
+    // if (fs.existsSync(file)){
+    //     data = fs.readFileSync(file, "utf8");
+    //     const result = JSON.parse(data);
+    // }
+
+    // const jsonData = JSON.stringify()
+
+    // fs.writeFileSync(file, )
+
+    async function getBookDetail(link, el) {
+        // console.log("url as a parameter: ", link)
+      const res = await fetch(link);
+    //   console.log("every individual book url: ", res);
+
+      if (!res.ok) {
+        throw new Error("Failed to get data from internet");
+      }
+
+      const html = await res.text();
+
+      const $ = cheerio.load(html);
+         console.log("html is loaded for individual books: ", $.html().split(" ").join(""))
+
+      const bookName = $(el).find("h1").text();
+
+      const price = $(el).find(".price_color").text();
+
+      const cleanPrice = Number(price.replace(/[^\d.]/g, ""));
+
+      const availability = $(el).find(".availability").text().trim();
+
+      const classAttr = $(el).find(".star-rating").attr("class");
+      const rating = classAttr.split(" ")[1].trim();
+
+      const review = $(el).find(".table-striped").text();
+
+      const result = {
+        name: bookName,
+        price: cleanPrice,
+        rating: rating,
+        availability: availability,
+        reviews: review,
+      };
+
+      books.push(result);
+    }
+    console.log("books data is: ", books)
+  } catch (error) {
+    console.error("Something went wrong: ", error);
+  }
 }
 
-scrapeReview("https://books.toscrape.com/index.html");
+scrapeReview();
